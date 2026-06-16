@@ -91,6 +91,10 @@ USE_TZ = True
 
 
 # === STATIC & MEDIA FILES ===
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 STATICFILES_DIRS = []
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
