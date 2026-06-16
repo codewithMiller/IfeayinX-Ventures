@@ -4,7 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('administrative-security-activities501B64/', admin.site.urls),
     path('', include('shop_project.urls')),  # rename 'shop_project' if your app is named differently
 ]
 
