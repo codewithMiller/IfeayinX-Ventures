@@ -94,7 +94,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+WHITENOISE_AUTOREFRESH = True
 # Required for the static() helper in urls.py during local dev,
 # even though Cloudinary handles actual file storage.
 MEDIA_URL = '/media/'
