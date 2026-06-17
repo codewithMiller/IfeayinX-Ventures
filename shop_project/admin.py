@@ -27,6 +27,10 @@ class ProductAdmin(nested_admin.NestedModelAdmin):
     list_filter = ('category', 'gender')
     search_fields = ('name', 'description')
     inlines = [ProductVariantInline]
+    class Media:
+        css = {
+            'all': ('admin/css/custom_admin.css',)
+        }
 
 
 @admin.register(ProductVariant)
