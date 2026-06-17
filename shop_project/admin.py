@@ -1,16 +1,17 @@
 from django.contrib import admin
+import nested_admin
 from .models import Category, Product, ProductVariant, VariantImage, SiteSettings, Subscriber
 
 
-class VariantImageInline(admin.TabularInline):
+class VariantImageInline(nested_admin.NestedTabularInline):
     model = VariantImage
-    extra = 1
+    extra = 2
 
 
-class ProductVariantInline(admin.TabularInline):
+class ProductVariantInline(nested_admin.NestedTabularInline):
     model = ProductVariant
     extra = 1
-    show_change_link = True
+    inlines = [VariantImageInline]
 
 
 @admin.register(Category)
@@ -21,7 +22,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(nested_admin.NestedModelAdmin):
     list_display = ('name', 'category', 'gender', 'created_at')
     list_filter = ('category', 'gender')
     search_fields = ('name', 'description')
@@ -29,7 +30,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(ProductVariant)
-class ProductVariantAdmin(admin.ModelAdmin):
+class ProductVariantAdmin(nested_admin.NestedModelAdmin):
     list_display = ('product', 'color', 'price', 'stock', 'available', 'in_stock')
     list_filter = ('available', 'color')
     search_fields = ('product__name', 'color')
@@ -41,7 +42,6 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     list_display = ('whatsapp_number', 'business_name')
 
     def has_add_permission(self, request):
-        # Only allow adding if no instance exists yet (singleton)
         return not SiteSettings.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
