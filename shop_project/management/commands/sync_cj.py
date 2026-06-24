@@ -17,37 +17,44 @@ class Command(BaseCommand):
     help = "Sync Ankara clothing/fabric from CJDropshipping"
 
     def add_arguments(self, parser):
-        parser.add_argument('--limit', type=int, default=300, help='Maximum products to sync')
-        parser.add_argument('--max-pages', type=int, default=5, help='Max pages per keyword')
-        parser.add_argument('--clear-old', action='store_true', help='Delete all existing CJ products before sync')
+        parser.add_argument(
+            "--limit",
+            type=int,
+            default=None,
+            help="Maximum number of relevant products to import"
+        )
+        parser.add_argument(
+            "--max-pages",
+            type=int,
+            default=1,
+            help="Number of pages to fetch per keyword"
+        )
 
     def handle(self, *args, **options):
-        limit = options['limit']
-        max_pages = options['max_pages']
-        clear_old = options['clear_old']
+        max_products = options.get("limit")
+        max_pages = options.get("max_pages", 1)
 
         token = get_token()
         if not token:
             self.stdout.write(self.style.ERROR("Auth failed. Check your CJ_API_KEY."))
             return
 
-        if clear_old:
-            deleted, _ = Product.objects.filter(is_cj_product=True).delete()
-            self.stdout.write(self.style.WARNING(f"Cleared {deleted} old CJ products."))
-
         category, _ = Category.objects.get_or_create(name="Ankara")
 
-        # Use improved multi-page fetch from cj_api
-        products = fetch_clothing(token, max_pages=max_pages, max_products=limit)
+        products = fetch_clothing(
+            token,
+            max_pages=max_pages,
+            max_products=max_products
+        )
 
         if not products:
             self.stdout.write(self.style.WARNING("No products returned from CJ."))
             return
 
         added_count = 0
-        skipped_existing = 0
-        skipped_irrelevant = 0
         updated_count = 0
+        existing_count = 0
+        skipped_missing = 0
 
         for item in products:
             pid = item.get("pid")
@@ -56,10 +63,10 @@ class Command(BaseCommand):
             image = item.get("productImage", "")
 
             if not pid or not image:
-                skipped_irrelevant += 1
+                skipped_missing += 1
+                self.stdout.write(f"Skipped missing pid/image: {name}")
                 continue
 
-            # Create or update product
             product, created = Product.objects.get_or_create(
                 cj_pid=pid,
                 defaults={
@@ -76,23 +83,23 @@ class Command(BaseCommand):
                     stock=99,
                     available=True
                 )
-
                 VariantImage.objects.create(
                     variant=variant,
                     image_url=image
                 )
-
                 added_count += 1
                 self.stdout.write(self.style.SUCCESS(f"Added: {name}"))
             else:
-                # Update existing
                 changed = False
+
                 if product.name != name:
                     product.name = name
                     changed = True
-                if product.category != category:
+
+                if product.category_id != category.id:
                     product.category = category
                     changed = True
+
                 if not product.is_cj_product:
                     product.is_cj_product = True
                     changed = True
@@ -119,9 +126,10 @@ class Command(BaseCommand):
                     )
                     updated_count += 1
 
-                skipped_existing += 1
+                existing_count += 1
+                self.stdout.write(f"Exists/checked: {name}")
 
         self.stdout.write(self.style.SUCCESS(
-            f"Sync complete. Added={added_count}, Existing={skipped_existing}, "
-            f"Updated={updated_count}, Skipped={skipped_irrelevant}"
+            f"Sync complete. Added={added_count}, Existing={existing_count}, "
+            f"Updated={updated_count}, SkippedMissing={skipped_missing}"
         ))
