@@ -93,6 +93,7 @@ class VariantImage(models.Model):
     )
     image = CloudinaryField('image')
     #image = models.ImageField(upload_to='variant_images/')
+    image_url = models.URLField(blank=True)  # for CJ hosted images
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
