@@ -43,9 +43,10 @@
       </select>
 
       <select name="gender" class="bg-[#0A0A0A] border border-[#C9A84C]/20 px-3 py-2 rounded-lg text-[#FAF7F0]">
-        <option value="M" {% if selected_gender == 'M' %}selected{% endif %}>Men</option>
-        <option value="W" {% if selected_gender == 'W' %}selected{% endif %}>Women</option>
-        <option value="U" {% if selected_gender == 'U' %}selected{% endif %}>Unisex</option>
+  <option value="">All Genders</option>
+  <option value="M" {% if selected_gender == 'M' %}selected{% endif %}>Men</option>
+  <option value="W" {% if selected_gender == 'W' %}selected{% endif %}>Women</option>
+  <option value="U" {% if selected_gender == 'U' %}selected{% endif %}>Unisex</option>
       </select>
 
       <select name="color" class="bg-[#0A0A0A] border border-[#C9A84C]/20 px-3 py-2 rounded-lg text-[#FAF7F0]">
