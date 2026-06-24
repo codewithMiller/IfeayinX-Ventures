@@ -51,61 +51,57 @@ def get_category_and_descendants(category):
 
 
 def shop(request):
-    products = Product.objects.select_related('category').prefetch_related('variants__images')
+    products = (
+        Product.objects
+        .select_related('category')
+        .prefetch_related('variants__images')
+        .all()
+    )
 
-    # --- Search ---
+    # SEARCH
     query = request.GET.get('q', '').strip()
     if query:
         products = products.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(category__name__icontains=query) |
+            Q(variants__color__icontains=query)
+        ).distinct()
 
-    # --- Category filter (includes subcategories) ---
+    # CATEGORY
     category_id = request.GET.get('category')
-    site_settings = SiteSettings.load()
     selected_category = None
     if category_id:
         selected_category = get_object_or_404(Category, id=category_id)
         category_ids = get_category_and_descendants(selected_category)
         products = products.filter(category_id__in=category_ids)
 
-    # --- Gender filter ---
-    gender = request.GET.get('gender')
+    # GENDER
+    gender = request.GET.get('gender', '').strip()
     if gender in ('M', 'W', 'U'):
         products = products.filter(gender=gender)
 
-    # --- Color filter ---
+    # COLOR
     color = request.GET.get('color', '').strip()
     if color:
         products = products.filter(variants__color__iexact=color).distinct()
 
-    # Top-level categories for filter
+    # SIDEBAR / FILTER DATA
     categories = Category.objects.filter(parent__isnull=True).prefetch_related('children')
 
-    # Distinct colors
     available_colors = (
         ProductVariant.objects
-        .exclude(color='')
+        .exclude(color__isnull=True)
+        .exclude(color__exact='')
         .values_list('color', flat=True)
         .distinct()
         .order_by('color')
     )
 
-    # =========================
-    # PAGINATION (NEW)
-    # =========================
-    paginator = Paginator(products, 24)  # 24 products per page
-    page_number = request.GET.get('page', 1)
-    try:
-        page_obj = paginator.page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.page(1)
-    except EmptyPage:
-        page_obj = paginator.page(paginator.num_pages)
+    site_settings = SiteSettings.load()
 
     context = {
-        'products': page_obj,           # Now a page object
-        'page_obj': page_obj,           # For template pagination controls
+        'products': products,
         'categories': categories,
         'available_colors': available_colors,
         'selected_category': selected_category,
@@ -115,7 +111,6 @@ def shop(request):
         'site_settings': site_settings,
     }
     return render(request, 'shop/shop.html', context)
-
 
 def product_detail(request, product_id):
     product = get_object_or_404(
