@@ -11,60 +11,27 @@ ANKARA_SEARCH_TERMS = [
     "african wax print fabric",
     "african print fabric",
     "ankara dress",
+    "african dress",
+    "kitenge",
+    "dashiki",
+    "boubou",
+    "kaftan",
+    "ankara gown",
+    "african print dress",
 ]
 
 ALLOWED_KEYWORDS = [
-    "ankara",
-    "african print",
-    "wax print",
-    "kitenge",
-    "dashiki",
-    "african dress",
-    "ankara dress",
-    "fabric",
-    "cloth",
-    "textile",
-    "material",
-    "gown",
-    "skirt",
-    "blouse",
+    "ankara", "african print", "wax print", "kitenge", "dashiki",
+    "african dress", "ankara dress", "fabric", "cloth", "textile",
+    "material", "gown", "skirt", "blouse", "kaftan", "boubou"
 ]
 
 BLOCKED_KEYWORDS = [
-    "bed",
-    "sofa",
-    "mattress",
-    "pillow",
-    "chair",
-    "table",
-    "beanie",
-    "cap",
-    "hat",
-    "helmet",
-    "lingerie",
-    "underwear",
-    "bra",
-    "panties",
-    "bikini",
-    "swim",
-    "earring",
-    "necklace",
-    "bracelet",
-    "ring",
-    "pet",
-    "cat",
-    "dog",
-    "toy",
-    "baseball",
-    "bedroom",
-    "furniture",
-    "curtain",
-    "rug",
-    "wallet",
-    "watch",
-    "shoe",
-    "sneaker",
-    "sock",
+    "bed", "sofa", "mattress", "pillow", "chair", "table", "beanie",
+    "cap", "hat", "helmet", "lingerie", "underwear", "bra", "panties",
+    "bikini", "swim", "earring", "necklace", "bracelet", "ring",
+    "pet", "cat", "dog", "toy", "baseball", "bedroom", "furniture",
+    "curtain", "rug", "wallet", "watch", "shoe", "sneaker", "sock",
 ]
 
 
@@ -108,6 +75,88 @@ def is_relevant_ankara_item(item):
 
     return False
 
+
+def fetch_products_for_keyword(token, keyword, page=1, page_size=50, retries=3):
+    headers = {"CJ-Access-Token": token}
+
+    for attempt in range(retries):
+        try:
+            res = requests.get(
+                f"{BASE_URL}/product/list",
+                headers=headers,
+                params={
+                    "productNameEn": keyword,
+                    "pageNum": page,
+                    "pageSize": page_size,
+                },
+                timeout=30
+            )
+
+            if res.status_code == 429:
+                wait_time = 5 * (attempt + 1)
+                print(f"[CJ] Rate limited on '{keyword}' page {page}. Waiting {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+
+            res.raise_for_status()
+            data = res.json()
+
+            if data.get("result") and data.get("data"):
+                return data["data"].get("list", [])
+
+            return []
+
+        except requests.RequestException as e:
+            print(f"[CJ] Error fetching '{keyword}' page {page}: {e}")
+            if attempt < retries - 1:
+                time.sleep(3 * (attempt + 1))
+            else:
+                return []
+
+    return []
+
+
+def fetch_clothing(token, max_pages=4, max_products=300):
+    """Improved: Multi-page + higher limit"""
+    seen_pids = set()
+    filtered_products = []
+
+    print(f"[CJ] Starting fetch with {len(ANKARA_SEARCH_TERMS)} keywords, up to {max_pages} pages each.")
+
+    for keyword in ANKARA_SEARCH_TERMS:
+        print(f"[CJ] Fetching keyword: {keyword}")
+
+        for page in range(1, max_pages + 1):
+            products = fetch_products_for_keyword(
+                token, keyword, page=page, page_size=50
+            )
+
+            added = 0
+            for item in products:
+                pid = item.get("pid")
+                if not pid or pid in seen_pids:
+                    continue
+
+                if not is_relevant_ankara_item(item):
+                    continue
+
+                seen_pids.add(pid)
+                filtered_products.append(item)
+                added += 1
+
+                if len(filtered_products) >= max_products:
+                    print(f"[CJ] Reached max products limit ({max_products})")
+                    return filtered_products
+
+            print(f"  → Page {page}: {len(products)} items, {added} new relevant added")
+
+            if len(products) < 50:  # Last page
+                break
+
+            time.sleep(1.5)  # Be gentle with rate limits
+
+    print(f"[CJ] Total relevant products fetched: {len(filtered_products)}")
+    return filtered_products
 
 def fetch_products_for_keyword(token, keyword, page=1, page_size=20, retries=3):
     headers = {"CJ-Access-Token": token}
