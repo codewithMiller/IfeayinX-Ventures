@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% block title %}{{ site_settings.business_name|default:"Joy" }} — Luxury Ankara Fashion{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="relative pt-24 pb-16 md:pt-32 md:pb-24 flex flex-col items-center text-center px-6 min-h-screen">
+  <div class="absolute inset-0 bg-gradient-to-b from-[#0A0A0A] via-[#0A0A0A] to-[#1a1a1a]"></div>
+  <div class="absolute top-20 left-10 w-64 h-64 rounded-full bg-[#C9A84C]/5 blur-3xl"></div>
+  <div class="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-[#C9A84C]/5 blur-3xl"></div>
+
+  <div class="relative z-10 mb-8 fade-up">
+    <p class="text-[#C9A84C] uppercase tracking-[0.3em] text-sm mb-4">New Collection</p>
+    <h2 class="text-4xl md:text-7xl font-black text-[#FAF7F0] leading-tight mb-6">
+      Wear Your<br>Heritage
+    </h2>
+    <p class="text-lg md:text-xl text-[#FAF7F0]/70 max-w-xl mx-auto">
+      Luxury Ankara fashion crafted for the modern African woman.
+    </p>
+    <a href="{% url 'shop' %}" class="btn-gold inline-block mt-8 py-3 px-8 rounded-lg text-[#0A0A0A] font-semibold">
+      Shop Now
+    </a>
+  </div>
+
+  <!-- 3D Carousel - uses first featured product images -->
+<div class="relative z-10 carousel-scene flex items-center justify-center w-full">
+  <div class="carousel-track">
+    {% for product in featured_products %}
+      {% with v=product.first_variant %}
+      <div class="card-3d">
+        {% if v and v.images.first %}
+          {% with img=v.images.first %}
+            {% if img.image_url %}
+              <img src="{{ img.image_url }}" alt="{{ product.name }}" class="w-full h-full object-cover" loading="lazy">
+            {% elif img.image %}
+              <img src="{{ img.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover" loading="lazy">
+            {% else %}
+              <div class="w-full h-full bg-[#1a1a1a] flex items-center justify-center text-[#C9A84C]/40 text-sm">No Image</div>
+            {% endif %}
+          {% endwith %}
+        {% else %}
+          <div class="w-full h-full bg-[#1a1a1a] flex items-center justify-center text-[#C9A84C]/40 text-sm">No Image</div>
+        {% endif %}
+      </div>
+      {% endwith %}
+    {% endfor %}
+  </div>
+</div>
+</section>
+<!-- =========================
+    FEATURED PRODUCTS
+========================= -->
+<section class="py-20 px-6 bg-[#0A0A0A]">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16">
+      <p class="text-[#C9A84C] uppercase tracking-[0.3em] text-sm mb-3">Handpicked For You</p>
+      <h2 class="text-4xl md:text-5xl font-black text-[#FAF7F0]">Featured Pieces</h2>
+    </div>
+
+    <!-- =========================
+        MOBILE: 2-COLUMN GRID
+    ========================== -->
+    <div class="md:hidden grid grid-cols-2 gap-4 px-1 pb-8">
+      {% for product in featured_products %}
+        {% with v=product.first_variant %}
+        <a href="{% url 'product_detail' product.id %}"
+           class="block bg-[#111] rounded-2xl overflow-hidden border border-[#C9A84C]/10 active:scale-[0.98] transition">
+
+          <div class="aspect-[4/5] relative overflow-hidden bg-[#111]">
+            {% if v and v.images.first %}
+              {% with img=v.images.first %}
+                {% if img.image_url %}
+                  <img src="{{ img.image_url }}"
+                       alt="{{ product.name }}"
+                       class="w-full h-full object-cover"
+                       loading="lazy"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden absolute inset-0 items-center justify-center text-[#C9A84C]/40 text-sm">
+                    No Image
+                  </div>
+                {% elif img.image %}
+                  <img src="{{ img.image.url }}"
+                       alt="{{ product.name }}"
+                       class="w-full h-full object-cover"
+                       loading="lazy"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden absolute inset-0 items-center justify-center text-[#C9A84C]/40 text-sm">
+                    No Image
+                  </div>
+                {% else %}
+                  <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/40 text-sm">
+                    No Image
+                  </div>
+                {% endif %}
+              {% endwith %}
+            {% else %}
+              <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/40 text-sm">
+                No Image
+              </div>
+            {% endif %}
+
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+
+            {% if v and v.available and v.stock > 0 %}
+              <span class="absolute top-3 left-3 px-2 py-1 rounded-full text-[10px] font-semibold bg-[#C9A84C] text-black">
+                In Stock
+              </span>
+            {% else %}
+              <span class="absolute top-3 left-3 px-2 py-1 rounded-full text-[10px] font-semibold bg-red-500/90 text-white">
+                Sold Out
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="p-3">
+            <h3 class="text-sm font-bold text-[#FAF7F0] line-clamp-2 min-h-[2.5rem]">
+              {{ product.name }}
+            </h3>
+
+            {% if v %}
+              <p class="text-[#C9A84C] font-semibold mt-1">₦{{ v.price }}</p>
+            {% endif %}
+          </div>
+        </a>
+        {% endwith %}
+      {% empty %}
+        <div class="col-span-2 text-center py-10 text-[#FAF7F0]/60">
+          No featured products available right now.
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- =========================
+        DESKTOP / TABLET GRID
+    ========================== -->
+    <div class="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-8">
+      {% for product in featured_products %}
+        {% with v=product.first_variant %}
+        <a href="{% url 'product_detail' product.id %}"
+           class="group block bg-[#111] rounded-3xl overflow-hidden border border-[#C9A84C]/10 hover:border-[#C9A84C]/30 transition duration-300">
+
+          <div class="aspect-[4/5] relative overflow-hidden bg-[#111]">
+            {% if v and v.images.first %}
+              {% with img=v.images.first %}
+                {% if img.image_url %}
+                  <img src="{{ img.image_url }}"
+                       alt="{{ product.name }}"
+                       class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                       loading="lazy"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden absolute inset-0 items-center justify-center text-[#C9A84C]/40 text-sm">
+                    No Image
+                  </div>
+                {% elif img.image %}
+                  <img src="{{ img.image.url }}"
+                       alt="{{ product.name }}"
+                       class="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                       loading="lazy"
+                       onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden absolute inset-0 items-center justify-center text-[#C9A84C]/40 text-sm">
+                    No Image
+                  </div>
+                {% else %}
+                  <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/40 text-sm">
+                    No Image
+                  </div>
+                {% endif %}
+              {% endwith %}
+            {% else %}
+              <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/40 text-sm">
+                No Image
+              </div>
+            {% endif %}
+
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+
+            {% if v and v.available and v.stock > 0 %}
+              <span class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold bg-[#C9A84C] text-black">
+                In Stock
+              </span>
+            {% else %}
+              <span class="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold bg-red-500/90 text-white">
+                Sold Out
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="p-5">
+            <h3 class="text-lg font-bold text-[#FAF7F0] line-clamp-2 min-h-[3.5rem]">
+              {{ product.name }}
+            </h3>
+
+            {% if v %}
+              <p class="text-[#C9A84C] font-semibold mt-2 text-lg">₦{{ v.price }}</p>
+            {% endif %}
+          </div>
+        </a>
+        {% endwith %}
+      {% empty %}
+        <div class="col-span-4 text-center py-16 text-[#FAF7F0]/60">
+          No featured products available right now.
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- Subscribe + WhatsApp Channel Section -->
+<section class="py-20 px-6 bg-[#111]">
+  <div class="max-w-2xl mx-auto text-center fade-up">
+    <h2 class="text-3xl md:text-4xl font-bold text-[#FAF7F0] mb-4">Stay in the Loop</h2>
+    <p class="text-[#FAF7F0]/60 mb-8">
+      Subscribe for exclusive drops and restocks. Or join our WhatsApp Channel for instant updates.
+    </p>
+
+    <!-- Email Subscribe -->
+    <form id="subscribe-form" action="{% url 'subscribe' %}" method="POST" class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+      {% csrf_token %}
+      <label for="email-input" class="sr-only">Email address</label>
+      <input id="email-input" type="email" name="email" required placeholder="Enter your email"
+        class="flex-1 max-w-sm px-5 py-3 rounded-lg bg-[#1a1a1a] border border-[#C9A84C]/30 text-[#FAF7F0] focus:outline-none focus:border-[#C9A84C]">
+      <button type="submit" class="btn-gold px-8 py-3 rounded-lg text-[#0A0A0A] font-semibold">
+        Subscribe
+      </button>
+    </form>
+    <p id="subscribe-success" class="hidden mt-2 mb-6 text-[#C9A84C] font-medium">You're in! 💛</p>
+
+    <!-- WhatsApp Channel -->
+    {% if site_settings.whatsapp_channel %}
+    <a href="{{ site_settings.whatsapp_channel }}" target="_blank" rel="noopener noreferrer"
+      class="inline-flex items-center gap-3 border border-[#25D366]/40 text-[#25D366] hover:bg-[#25D366]/10 transition px-6 py-3 rounded-lg font-semibold">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+      Join our WhatsApp Channel
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="border-t border-[#C9A84C]/10 py-16 px-6 bg-[#0A0A0A]">
+  <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
+    <div>
+      <h4 class="text-[#C9A84C] font-bold uppercase tracking-wider text-sm mb-4">Shop</h4>
+      <ul class="space-y-2">
+        <li><a href="{% url 'shop' %}" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">All Products</a></li>
+        <li><a href="{% url 'shop' %}?gender=W" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">Women</a></li>
+        <li><a href="{% url 'shop' %}?gender=M" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">Men</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="text-[#C9A84C] font-bold uppercase tracking-wider text-sm mb-4">Info</h4>
+      <ul class="space-y-2">
+        <!-- TODO: wire up when About/Contact pages exist -->
+        <li><a href="#" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">About Us</a></li>
+        <li><a href="#" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">Contact</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="text-[#C9A84C] font-bold uppercase tracking-wider text-sm mb-4">Help</h4>
+      <ul class="space-y-2">
+        <li><a href="#" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">How to Order</a></li>
+        <li><a href="#" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors text-sm">Sizing Guide</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="text-[#C9A84C] font-bold uppercase tracking-wider text-sm mb-4">Follow Us</h4>
+      <div class="flex gap-4">
+        {% if site_settings.whatsapp_number %}
+        <a href="https://wa.me/{{ site_settings.whatsapp_number }}" target="_blank" rel="noopener noreferrer"
+          class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors" aria-label="WhatsApp">
+          <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </a>
+        {% endif %}
+        <!-- TODO: add real Instagram/Facebook/TikTok links via SiteSettings if needed -->
+        <a href="https://www.tiktok.com/@joy_bale_ankara?_r=1&_t=ZS-97HW2juNrR1" target="_blank" rel="noopener" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors" aria-label="TikTok">
+  <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.88 2.89 2.89 0 01-2.88-2.88 2.89 2.89 0 012.88-2.88c.28 0 .56.04.82.11v-3.5a6.37 6.37 0 00-.82-.05A6.34 6.34 0 003.15 15.6a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V9.4a8.16 8.16 0 004.76 1.52v-3.4a4.85 4.85 0 01-1-.83z"/>
+  </svg>
+</a>
+        <a href="https://www.facebook.com/share/1PS9s5k7BL/?mibextid=wwXIfr" class="text-[#FAF7F0]/60 hover:text-[#C9A84C] transition-colors" aria-label="Facebook">
+          <i data-lucide="facebook" style="width:24px;height:24px"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto mt-12 pt-8 border-t border-[#C9A84C]/10 text-center">
+    <p class="text-[#FAF7F0]/40 text-sm">
+      &copy; {% now "Y" %} {{ site_settings.business_name|default:"Joy" }}. All rights reserved.
+    </p>
+    </br>
+    <p>©MillerHoldings.co</p>
+  </div>
+</footer>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  lucide.createIcons();
+
+  // Menu toggle
+  const overlay = document.getElementById('nav-overlay');
+  document.getElementById('menu-toggle').addEventListener('click', () => overlay.classList.add('open'));
+  document.getElementById('menu-close').addEventListener('click', () => overlay.classList.remove('open'));
+
+  // Subscribe form - AJAX so page doesn't reload
+  document.getElementById('subscribe-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value },
+      body: new FormData(form)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('subscribe-success').classList.remove('hidden');
+        form.reset();
+      }
+    });
+  });
+
+  // Scroll fade-in
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+</script>
+{% endblock %}
