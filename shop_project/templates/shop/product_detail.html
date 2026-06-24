@@ -18,7 +18,7 @@
         {% with first_variant=variants.first %}
           {% if first_variant and first_variant.images.first %}
             <img id="main-product-image"
-                 src="{{ first_variant.images.first.image.url }}"
+                 src="{% with img=first_variant.images.first %}{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}{% endwith %}"
                  class="w-full h-[500px] object-cover lg:h-[650px]">
           {% else %}
             <div id="main-product-image"
@@ -83,9 +83,9 @@
       data-price="{{ v.price }}"
       data-in-stock="{{ v.in_stock|yesno:'true,false' }}"
       data-whatsapp-link="{{ v.whatsapp_link }}"
-      data-image="{{ v.images.first.image.url }}"
+      data-image="{% with img=v.images.first %}{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}{% endwith %}"
     >
-      <img src="{{ v.images.first.image.url }}"
+      <img src="{% with img=v.images.first %}{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}{% endwith %}"
            alt="{{ v.color|default:'Variant' }}"
            class="w-20 h-24 object-cover">
     </button>
