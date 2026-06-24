@@ -4,132 +4,214 @@ from shop_project.models import Product, ProductVariant, VariantImage, Category
 
 
 def parse_price(price_val):
+    """
+    CJ sometimes returns price values like:
+    '12.5'
+    '12.5--18.9'
+    None
+    """
     if not price_val:
         return 0
-    price_str = str(price_val).split('--')[0].strip()
+
+    price_str = str(price_val).split("--")[0].strip()
+
     try:
         return float(price_str)
-    except ValueError:
+    except (ValueError, TypeError):
         return 0
 
 
 class Command(BaseCommand):
-    help = "Sync Ankara clothing/fabric from CJDropshipping"
+    help = "Sync clothing products from CJDropshipping into your store"
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--keyword",
+            type=str,
+            default="Ankara fabric",
+            help="CJ product search keyword, e.g. 'Ankara fabric', 'Men suit', 'Kaftan'"
+        )
+        parser.add_argument(
+            "--category",
+            type=str,
+            default="Ankara",
+            help="Local category name to assign products to, e.g. 'Ankara', 'Suits', 'Kaftans'"
+        )
+        parser.add_argument(
             "--limit",
             type=int,
-            default=None,
-            help="Maximum number of relevant products to import"
+            default=100,
+            help="Maximum number of products to save locally"
         )
         parser.add_argument(
             "--max-pages",
             type=int,
-            default=1,
-            help="Number of pages to fetch per keyword"
+            default=5,
+            help="Maximum number of CJ result pages to fetch"
         )
 
     def handle(self, *args, **options):
-        max_products = options.get("limit")
-        max_pages = options.get("max_pages", 1)
+        keyword = options["keyword"].strip()
+        category_name = options["category"].strip()
+        limit = options["limit"]
+        max_pages = options["max_pages"]
+
+        if limit <= 0:
+            self.stdout.write(self.style.ERROR("Limit must be greater than 0."))
+            return
+
+        if max_pages <= 0:
+            self.stdout.write(self.style.ERROR("max-pages must be greater than 0."))
+            return
 
         token = get_token()
         if not token:
             self.stdout.write(self.style.ERROR("Auth failed. Check your CJ_API_KEY."))
             return
 
-        category, _ = Category.objects.get_or_create(name="Ankara")
+        category, _ = Category.objects.get_or_create(name=category_name)
 
-        products = fetch_clothing(
-            token,
-            max_pages=max_pages,
-            max_products=max_products
+        total_saved = 0
+        total_created = 0
+        total_updated = 0
+        total_skipped = 0
+
+        self.stdout.write(
+            self.style.WARNING(
+                f"Starting CJ sync | keyword='{keyword}' | category='{category_name}' | "
+                f"limit={limit} | max_pages={max_pages}"
+            )
         )
 
-        if not products:
-            self.stdout.write(self.style.WARNING("No products returned from CJ."))
-            return
+        for page in range(1, max_pages + 1):
+            if total_saved >= limit:
+                break
 
-        added_count = 0
-        updated_count = 0
-        existing_count = 0
-        skipped_missing = 0
+            products = fetch_clothing(token, keyword=keyword, page=page)
 
-        for item in products:
-            pid = item.get("pid")
-            name = item.get("productNameEn", "Unnamed")
-            price = parse_price(item.get("sellPrice", 0))
-            image = item.get("productImage", "")
+            if not products:
+                self.stdout.write(f"No products returned from CJ on page {page}.")
+                break
 
-            if not pid or not image:
-                skipped_missing += 1
-                self.stdout.write(f"Skipped missing pid/image: {name}")
-                continue
+            self.stdout.write(f"Fetched {len(products)} products from CJ page {page}.")
 
-            product, created = Product.objects.get_or_create(
-                cj_pid=pid,
-                defaults={
-                    "name": name,
-                    "category": category,
-                    "is_cj_product": True,
-                }
-            )
+            for item in products:
+                if total_saved >= limit:
+                    break
 
-            if created:
-                variant = ProductVariant.objects.create(
-                    product=product,
-                    price=price,
-                    stock=99,
-                    available=True
+                pid = item.get("pid")
+                name = item.get("productNameEn", "Unnamed Product").strip()
+                price = parse_price(item.get("sellPrice", 0))
+                image = item.get("productImage", "")
+
+                if not pid:
+                    total_skipped += 1
+                    self.stdout.write(self.style.WARNING("Skipped product with no pid."))
+                    continue
+
+                if not image:
+                    total_skipped += 1
+                    self.stdout.write(self.style.WARNING(f"Skipped {name} (no image)."))
+                    continue
+
+                # Create or update the Product
+                product, created = Product.objects.get_or_create(
+                    cj_pid=pid,
+                    defaults={
+                        "name": name,
+                        "category": category,
+                        "is_cj_product": True,
+                    }
                 )
-                VariantImage.objects.create(
-                    variant=variant,
-                    image_url=image
-                )
-                added_count += 1
-                self.stdout.write(self.style.SUCCESS(f"Added: {name}"))
-            else:
-                changed = False
 
-                if product.name != name:
-                    product.name = name
-                    changed = True
-
-                if product.category_id != category.id:
-                    product.category = category
-                    changed = True
-
-                if not product.is_cj_product:
-                    product.is_cj_product = True
-                    changed = True
-
-                if changed:
-                    product.save()
-
-                variant = product.variants.first()
-                if variant:
-                    if variant.price != price:
-                        variant.price = price
-                        variant.save()
-                        updated_count += 1
-                else:
+                if created:
+                    # Brand new CJ product
                     variant = ProductVariant.objects.create(
                         product=product,
                         price=price,
                         stock=99,
                         available=True
                     )
+
                     VariantImage.objects.create(
                         variant=variant,
                         image_url=image
                     )
-                    updated_count += 1
 
-                existing_count += 1
-                self.stdout.write(f"Exists/checked: {name}")
+                    total_created += 1
+                    total_saved += 1
+                    self.stdout.write(self.style.SUCCESS(f"Added: {name}"))
 
-        self.stdout.write(self.style.SUCCESS(
-            f"Sync complete. Added={added_count}, Existing={existing_count}, "
-            f"Updated={updated_count}, SkippedMissing={skipped_missing}"
-        ))
+                else:
+                    # Existing product: keep it updated
+                    changed = False
+
+                    if product.name != name:
+                        product.name = name
+                        changed = True
+
+                    if product.category != category:
+                        product.category = category
+                        changed = True
+
+                    if not product.is_cj_product:
+                        product.is_cj_product = True
+                        changed = True
+
+                    if changed:
+                        product.save()
+
+                    # Ensure it has at least one variant
+                    variant = product.variants.first()
+                    if not variant:
+                        variant = ProductVariant.objects.create(
+                            product=product,
+                            price=price,
+                            stock=99,
+                            available=True
+                        )
+                        changed = True
+                    else:
+                        # update variant price / availability if needed
+                        if variant.price != price:
+                            variant.price = price
+                            changed = True
+
+                        if variant.stock is None or variant.stock <= 0:
+                            variant.stock = 99
+                            changed = True
+
+                        if not variant.available:
+                            variant.available = True
+                            changed = True
+
+                        if changed:
+                            variant.save()
+
+                    # Ensure it has at least one image
+                    existing_image = variant.images.first()
+                    if not existing_image:
+                        VariantImage.objects.create(
+                            variant=variant,
+                            image_url=image
+                        )
+                        changed = True
+                    else:
+                        # If image_url exists and is different, update it
+                        if hasattr(existing_image, "image_url") and existing_image.image_url != image:
+                            existing_image.image_url = image
+                            existing_image.save()
+                            changed = True
+
+                    total_updated += 1
+                    total_saved += 1
+                    self.stdout.write(self.style.WARNING(f"Updated existing: {name}"))
+
+        self.stdout.write("")
+        self.stdout.write(self.style.SUCCESS("=== CJ Sync Complete ==="))
+        self.stdout.write(f"Keyword: {keyword}")
+        self.stdout.write(f"Category: {category_name}")
+        self.stdout.write(f"Created: {total_created}")
+        self.stdout.write(f"Updated: {total_updated}")
+        self.stdout.write(f"Skipped: {total_skipped}")
+        self.stdout.write(f"Processed into store: {total_saved}")
