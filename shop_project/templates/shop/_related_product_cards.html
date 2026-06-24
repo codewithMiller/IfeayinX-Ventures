@@ -5,9 +5,21 @@
 
         <div class="aspect-[3/4] overflow-hidden relative">
             {% if v and v.images.first %}
-                {% with img=v.images.first %}<img src="{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}"{% endwith %}
-                     alt="{{ product.name }}"
-                     class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                {% with img=v.images.first %}
+                    {% if img.image_url %}
+                        <img src="{{ img.image_url }}"
+                             alt="{{ product.name }}"
+                             class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    {% elif img.image %}
+                        <img src="{{ img.image.url }}"
+                             alt="{{ product.name }}"
+                             class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+                    {% else %}
+                        <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/30 bg-[#0A0A0A]">
+                            No Image
+                        </div>
+                    {% endif %}
+                {% endwith %}
             {% else %}
                 <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/30 bg-[#0A0A0A]">
                     No Image
