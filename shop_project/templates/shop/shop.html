@@ -22,22 +22,12 @@
 ========================= -->
 <section class="px-6 pb-10">
   <form method="get" class="max-w-6xl mx-auto">
-
     <div class="flex items-center justify-between bg-[#111] border border-[#C9A84C]/10 rounded-xl px-4 py-3">
-      <input
-        type="text"
-        name="q"
-        value="{{ query }}"
-        placeholder="Search collections..."
-        class="flex-1 bg-transparent text-[#FAF7F0] outline-none placeholder-[#FAF7F0]/40"
-      >
-
-      <button type="button" onclick="toggleFilters()" 
-        class="ml-4 p-2 rounded-lg hover:bg-[#C9A84C]/10 transition"
-        aria-label="Open filters">
+      <input type="text" name="q" value="{{ query }}" placeholder="Search collections..." 
+        class="flex-1 bg-transparent text-[#FAF7F0] outline-none placeholder-[#FAF7F0]/40">
+      <button type="button" onclick="toggleFilters()" class="ml-4 p-2 rounded-lg hover:bg-[#C9A84C]/10 transition">
         <i data-lucide="filter" class="w-5 h-5 text-[#C9A84C]"></i>
       </button>
-
       <button type="submit" class="ml-2 px-4 py-2 bg-[#C9A84C] text-black rounded-lg font-semibold">
         Go
       </button>
@@ -48,9 +38,7 @@
       <select name="category" class="bg-[#0A0A0A] border border-[#C9A84C]/20 px-3 py-2 rounded-lg text-[#FAF7F0]">
         <option value="">All Categories</option>
         {% for cat in categories %}
-          <option value="{{ cat.id }}" {% if selected_category and selected_category.id == cat.id %}selected{% endif %}>
-            {{ cat.name }}
-          </option>
+          <option value="{{ cat.id }}" {% if selected_category and selected_category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
         {% endfor %}
       </select>
 
@@ -67,8 +55,7 @@
         {% endfor %}
       </select>
 
-      <a href="{% url 'shop' %}" 
-         class="text-center px-3 py-2 text-[#C9A84C] border border-[#C9A84C]/20 rounded-lg hover:bg-[#C9A84C]/10 transition">
+      <a href="{% url 'shop' %}" class="text-center px-3 py-2 text-[#C9A84C] border border-[#C9A84C]/20 rounded-lg hover:bg-[#C9A84C]/10 transition">
         Reset
       </a>
     </div>
@@ -76,91 +63,56 @@
 </section>
 
 <!-- =========================
-    MOBILE EXPERIENCE - 2 COLUMNS (Amazon Style)
+    PRODUCTS GRID
 ========================= -->
-<div class="md:hidden px-4 pb-24">
-  <div class="grid grid-cols-2 gap-4">
-    {% for product in products %}
-      {% with v=product.first_variant %}
-      <a href="{% url 'product_detail' product.id %}" 
-         class="block bg-[#111] rounded-2xl overflow-hidden border border-[#C9A84C]/10 active:scale-[0.98] transition">
-
-        <!-- IMAGE -->
-        <div class="aspect-[4/5] relative overflow-hidden">
-          {% if v and v.images.first %}
-            {% with img=v.images.first %}
-            <img src="{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}" 
-              class="w-full h-full object-cover">
-          {% endwith %}
-          {% else %}
-            <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/30 text-sm">
-              No Image
-            </div>
-          {% endif %}
-          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent"></div>
-        </div>
-
-        <!-- INFO -->
-        <div class="p-3">
-          <h2 class="text-base font-bold text-[#FAF7F0] line-clamp-2">
-            {{ product.name }}
-          </h2>
-
-          {% if v %}
-            <p class="text-[#C9A84C] font-semibold mt-1 text-sm">
-              ₦{{ v.price }}
-            </p>
-          {% endif %}
-
-          <div class="mt-3 text-[10px] flex justify-between text-[#FAF7F0]/60">
-            <span>Tap to view</span>
-            <span class="text-[#C9A84C]">Luxury</span>
-          </div>
-        </div>
-      </a>
-      {% endwith %}
-    {% endfor %}
-  </div>
-</div>
-
-<!-- =========================
-    DESKTOP EXPERIENCE
-========================= -->
-<div class="hidden md:block px-6 pb-24">
+<div class="px-4 md:px-6 pb-24">
   <div class="max-w-7xl mx-auto">
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-10">
+    <!-- Mobile: 2 columns -->
+    <div class="md:hidden grid grid-cols-2 gap-4">
       {% for product in products %}
         {% with v=product.first_variant %}
-        <a href="{% url 'product_detail' product.id %}" 
-           class="group relative bg-[#111] rounded-xl overflow-hidden border border-[#C9A84C]/10 hover:scale-[1.02] transition duration-500">
-
-          <div class="aspect-[3/4] overflow-hidden relative">
+        <a href="{% url 'product_detail' product.id %}" class="block bg-[#111] rounded-2xl overflow-hidden border border-[#C9A84C]/10 active:scale-[0.98] transition">
+          <div class="aspect-[4/5] relative overflow-hidden">
             {% if v and v.images.first %}
               {% with img=v.images.first %}
-               <img src="{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}" 
-                 class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
-               {% endwith %}
+              <img src="{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}" 
+                   class="w-full h-full object-cover">
+              {% endwith %}
             {% else %}
-              <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/30">
-                No Image
-              </div>
+              <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/30 text-sm">No Image</div>
             {% endif %}
             <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent"></div>
           </div>
+          <div class="p-3">
+            <h2 class="text-base font-bold text-[#FAF7F0] line-clamp-2">{{ product.name }}</h2>
+            {% if v %}<p class="text-[#C9A84C] font-semibold mt-1 text-sm">₦{{ v.price }}</p>{% endif %}
+          </div>
+        </a>
+        {% endwith %}
+      {% endfor %}
+    </div>
 
-          <div class="p-5">
-            <h2 class="text-xl font-bold text-[#FAF7F0] group-hover:text-[#C9A84C] transition line-clamp-2">
-              {{ product.name }}
-            </h2>
-
-            {% if v %}
-              <p class="text-[#C9A84C] font-semibold mt-2">
-                ₦{{ v.price }}
-              </p>
+    <!-- Desktop: 3 columns -->
+    <div class="hidden md:grid grid-cols-2 lg:grid-cols-3 gap-10">
+      {% for product in products %}
+        {% with v=product.first_variant %}
+        <a href="{% url 'product_detail' product.id %}" class="group relative bg-[#111] rounded-xl overflow-hidden border border-[#C9A84C]/10 hover:scale-[1.02] transition duration-500">
+          <div class="aspect-[3/4] overflow-hidden relative">
+            {% if v and v.images.first %}
+              {% with img=v.images.first %}
+              <img src="{% if img.image_url %}{{ img.image_url }}{% else %}{{ img.image.url }}{% endif %}" 
+                   class="w-full h-full object-cover group-hover:scale-110 transition duration-700">
+              {% endwith %}
+            {% else %}
+              <div class="w-full h-full flex items-center justify-center text-[#C9A84C]/30">No Image</div>
             {% endif %}
-
-            <div class="mt-4 flex justify-between text-xs">
-              <span class="text-[#FAF7F0]/50">Hover to explore</span>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent"></div>
+          </div>
+          <div class="p-5">
+            <h2 class="text-xl font-bold text-[#FAF7F0] group-hover:text-[#C9A84C] transition line-clamp-2">{{ product.name }}</h2>
+            {% if v %}<p class="text-[#C9A84C] font-semibold mt-2">₦{{ v.price }}</p>{% endif %}
+            <div class="mt-4 flex justify-between text-xs text-[#FAF7F0]/60">
+              <span>Hover to explore</span>
               <span class="text-[#C9A84C]">View →</span>
             </div>
           </div>
@@ -168,12 +120,37 @@
         {% endwith %}
       {% endfor %}
     </div>
+
+    <!-- =========================
+        PAGINATION
+    ========================= -->
+    {% if page_obj and page_obj.has_other_pages %}
+    <div class="flex justify-center mt-12">
+      <div class="flex items-center gap-2 bg-[#111] border border-[#C9A84C]/20 rounded-xl px-4 py-3">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+             class="px-4 py-2 text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition">
+            ← Previous
+          </a>
+        {% endif %}
+
+        <span class="px-6 py-2 text-[#FAF7F0]/70">
+          Page <strong>{{ page_obj.number }}</strong> of {{ page_obj.paginator.num_pages }}
+        </span>
+
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}" 
+             class="px-4 py-2 text-[#C9A84C] hover:bg-[#C9A84C]/10 rounded-lg transition">
+            Next →
+          </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
-<!-- =========================
-    FLOATING WHATSAPP CTA
-========================= -->
+<!-- Floating WhatsApp -->
 <a href="https://wa.me/{{ site_settings.whatsapp_number }}" 
    class="fixed bottom-6 right-6 bg-[#25D366] text-black px-5 py-3 rounded-full shadow-lg font-semibold hover:scale-110 transition z-50">
   WhatsApp Us
