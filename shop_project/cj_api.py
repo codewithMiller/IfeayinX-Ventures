@@ -113,45 +113,18 @@ def fetch_products_for_keyword(token, keyword, page=1, page_size=20, retries=3):
     return []
 
 
-def fetch_clothing(token, max_pages=1, max_products=None):
-    """
-    max_pages: how many pages to fetch per keyword
-    max_products: stop after collecting this many relevant products
-    """
-    seen_pids = set()
-    filtered_products = []
-
-    for keyword in ANKARA_SEARCH_TERMS:
-        print(f"[CJ] Searching keyword: {keyword}")
-
-        for page in range(1, max_pages + 1):
-            products = fetch_products_for_keyword(
-                token,
-                keyword,
-                page=page,
-                page_size=20,
-                retries=3
-            )
-
-            if not products:
-                break
-
-            for item in products:
-                pid = item.get("pid")
-                if not pid or pid in seen_pids:
-                    continue
-
-                if not is_relevant_ankara_item(item):
-                    continue
-
-                seen_pids.add(pid)
-                filtered_products.append(item)
-
-                if max_products and len(filtered_products) >= max_products:
-                    return filtered_products
-
-            time.sleep(2)
-
-        time.sleep(2)
-
-    return filtered_products
+def fetch_clothing(token, keyword, page=1):
+    headers = {"CJ-Access-Token": token}
+    res = requests.get(
+        f"{BASE_URL}/product/list",
+        headers=headers,
+        params={
+            "productNameEn": keyword,
+            "pageNum": page,
+            "pageSize": 20
+        }
+    )
+    data = res.json()
+    if data.get("result"):
+        return data["data"]["list"]
+    return []
