@@ -25,15 +25,15 @@ class Command(BaseCommand):
     help = "Sync clothing products from CJDropshipping into your store"
 
     def add_arguments(self, parser):
-    parser.add_argument("--keyword", type=str, default=None)
-    parser.add_argument("--category", type=str, default="Fabric")
-    parser.add_argument("--limit", type=int, default=100)
-    parser.add_argument("--max-pages", type=int, default=5)
-    parser.add_argument(
+        parser.add_argument("--keyword", type=str, default=None)
+        parser.add_argument("--category", type=str, default="Fabric")
+        parser.add_argument("--limit", type=int, default=100)
+        parser.add_argument("--max-pages", type=int, default=5)
+        parser.add_argument(
         "--all-fabrics",
         action="store_true",
         help="Sync all fabric keywords in one run"
-    )
+        )
     def handle(self, *args, **options):
         keyword = options["keyword"].strip()
         category_name = options["category"].strip()
