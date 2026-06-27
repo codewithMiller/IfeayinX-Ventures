@@ -6,37 +6,66 @@ CJ_API_KEY = os.environ.get("CJ_API_KEY")
 BASE_URL = "https://developers.cjdropshipping.com/api2.0/v1"
 
 ANKARA_SEARCH_TERMS = [
+    "textile fabric",
+    "wax print fabric",
+    "cotton fabric",
+    "polyester fabric",
+    "lace fabric",
+    "chiffon fabric",
     "ankara fabric",
-    "african wax print fabric",
     "african print fabric",
-    "ankara dress",
+    "satin fabric",
+    "velvet fabric",
+    "georgette fabric",
+    "brocade fabric",
+    "sequin fabric",
 ]
 
 ALLOWED_KEYWORDS = [
-    "ankara",
-    "african print",
-    "wax print",
-    "kitenge",
-    "dashiki",
-    "african dress",
-    "ankara dress",
     "fabric",
-    "cloth",
     "textile",
+    "cloth",
     "material",
-    "gown",
-    "skirt",
-    "blouse",
+    "yardage",
+    "yard",
+    "meter",
+    "metres",
+    "wax print",
+    "ankara",
+    "kitenge",
+    "cotton",
+    "polyester",
+    "chiffon",
+    "satin",
+    "lace",
+    "velvet",
+    "georgette",
+    "brocade",
+    "sequin",
+    "crepe",
+    "organza",
+    "tulle",
+    "denim",
+    "silk",
+    "linen",
 ]
 
 BLOCKED_KEYWORDS = [
+    # garments
+    "dress", "gown", "skirt", "blouse", "shirt", "trouser", "pant",
+    "jacket", "coat", "suit", "jumpsuit", "romper", "top", "tee",
+    "hoodie", "sweater", "cardigan", "vest", "shorts",
+    # accessories
+    "earring", "necklace", "bracelet", "ring", "watch", "wallet",
+    "shoe", "sneaker", "boot", "heel", "sandal", "sock", "bag", "purse",
+    "hat", "cap", "beanie", "helmet", "scarf", "glove",
+    # home/furniture
     "bed", "sofa", "mattress", "pillow", "chair", "table",
-    "beanie", "cap", "hat", "helmet",
-    "lingerie", "underwear", "bra", "panties", "bikini", "swim",
-    "earring", "necklace", "bracelet", "ring",
-    "pet", "cat", "dog", "toy", "baseball",
-    "bedroom", "furniture", "curtain", "rug",
-    "wallet", "watch", "shoe", "sneaker", "sock",
+    "curtain", "rug", "blanket", "towel", "bedsheet",
+    "bedroom", "furniture",
+    # misc
+    "pet", "cat", "dog", "toy", "lingerie", "underwear",
+    "bra", "panties", "bikini", "swim",
 ]
 
 def normalize_text(value):
