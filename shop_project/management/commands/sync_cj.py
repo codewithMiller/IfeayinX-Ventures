@@ -1,254 +1,136 @@
+import os
 import time
-import re
-from django.core.management.base import BaseCommand
-from shop_project.cj_api import get_token, fetch_clothing
-from shop_project.models import Product, ProductVariant, VariantImage, Category
+import requests
+import re # Added for strict word filtering
 
-FABRIC_KEYWORDS = [
-    "textile fabric",
-    "wax print fabric",
-    "cotton fabric",
-    "polyester fabric",
-    "lace fabric",
-    "chiffon fabric",
-    "ankara fabric",
-    "satin fabric",
-    "velvet fabric",
-    "georgette fabric",
-    "brocade fabric",
+CJ_API_KEY = os.environ.get("CJ_API_KEY")
+BASE_URL = "https://cjdropshipping.com"
+
+ANKARA_SEARCH_TERMS = [
+    "textile fabric", "wax print fabric", "cotton fabric", "polyester fabric",
+    "lace fabric", "chiffon fabric", "ankara fabric", "african print fabric",
+    "satin fabric", "velvet fabric", "georgette fabric", "brocade fabric", "sequin fabric",
 ]
 
 ALLOWED_KEYWORDS = [
     "fabric", "textile", "cloth", "material", "yardage", "yard", "meter",
     "metres", "wax print", "ankara", "kitenge", "cotton", "polyester",
     "chiffon", "satin", "lace", "velvet", "georgette", "brocade",
-    "crepe", "organza", "tulle", "denim", "silk", "linen",
+    "sequin", "crepe", "organza", "tulle", "denim", "silk", "linen",
 ]
 
 BLOCKED_KEYWORDS = [
-    "dress", "gown", "skirt", "blouse", "shirt", "trouser", "pant", "pants",
+    # garments & swimwear
+    "dress", "gown", "skirt", "blouse", "shirt", "trouser", "pant", "pants","swim","pet"
     "jacket", "coat", "suit", "jumpsuit", "romper", "top", "tee", "t-shirt",
     "hoodie", "sweater", "cardigan", "vest", "shorts", "wear", "clothing",
+    "bikini", "swim", "swimsuit", "swimwear", "bathing", "monokini", "lingerie", "underwear", "bra", "panties",
+    # accessories & home finished goods
     "earring", "necklace", "bracelet", "ring", "watch", "wallet",
     "shoe", "sneaker", "boot", "heel", "sandal", "sock", "socks", "bag", "purse",
     "hat", "cap", "beanie", "helmet", "scarf", "glove", "gloves",
-    "bed", "sofa", "mattress", "pillow", "chair", "table",
-    "curtain", "rug", "blanket", "towel", "bedsheet", "furniture",
-    "pet", "cat", "dog", "toy", "lingerie", "underwear", "undergarments",
-    "bra", "panties", "bikini", "swim", "swimsuit", "swimwear", "bathing", "monokini"
+    "bed", "sofa", "mattress", "pillow", "chair", "table", "bedroom", "furniture",
+    "curtain", "rug", "blanket", "towel", "bedsheet", "pet", "cat", "dog", "toy",
 ]
 
+def normalize_text(value):
+    return (value or "").strip().lower()
 
-def parse_price(price_val):
-    if not price_val:
-        return 0
-    price_str = str(price_val).split("--")[0].strip()
+def get_token():
     try:
-        return float(price_str)
-    except (ValueError, TypeError):
-        return 0
+        res = requests.post(
+            f"{BASE_URL}/authentication/getAccessToken",
+            json={"apiKey": CJ_API_KEY},
+            timeout=30
+        )
+        res.raise_for_status()
+        data = res.json()
+        if data.get("result") and data.get("data"):
+            return data["data"].get("accessToken")
+    except requests.RequestException as e:
+        print(f"CJ auth error: {e}")
+    return None
 
+def is_relevant_ankara_item(item):
+    name = normalize_text(item.get("productNameEn"))
+    desc = normalize_text(item.get("description"))
+    combined = f"{name} {desc}".strip()
 
-def is_relevant_fabric(item):
-    name = (item.get("productNameEn") or "").strip().lower()
-    desc = (item.get("description") or "").strip().lower()
-    combined = f"{name} {desc}"
-
-    if not combined.strip():
+    if not combined:
         return False
 
-    # 1. Extract clean, individual words
+    # Extract distinct whole words
     words = set(re.findall(r'\b[a-z]+\b', combined))
 
-    # 2. Block finished clothing words instantly
+    # Strict Check 1: If any standalone word matches our blocked list, reject it
     if any(bad in words for bad in BLOCKED_KEYWORDS):
         return False
-        
-    # 3. Block multi-word apparel phrases
-    if any(phrase in combined for phrase in ["swim", "bikini", "lingerie", "piece suit", "clothing", "wear"]):
+
+    # Strict Check 2: Protect against phrase variations like "two piece" or "swim suit"
+    if any(phrase in combined for phrase in ["swim", "bikini", "piece suit", "lingerie"]):
         return False
 
-    # 4. Must contain a raw fabric keyword
+    # Strict Check 3: Must include at least one valid fabric identifier word
     return any(good in words for good in ALLOWED_KEYWORDS)
 
+def fetch_products_for_keyword(token, keyword, page=1, page_size=20, retries=3, category_id="A04"):
+    # "A04" is the common top-level CJ category prefix for Home Textiles / Fabrics
+    headers = {"CJ-Access-Token": token}
+    params = {
+        "productNameEn": keyword,
+        "pageNum": page,
+        "pageSize": page_size,
+    }
+    if category_id:
+        params["categoryId"] = category_id
 
-class Command(BaseCommand):
-    help = "Sync fabric/textile products from CJDropshipping into your store"
+    for attempt in range(retries):
+        try:
+            res = requests.get(
+                f"{BASE_URL}/product/list",
+                headers=headers,
+                params=params,
+                timeout=30
+            )
 
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--keyword",
-            type=str,
-            default=None,
-            help="Single CJ search keyword e.g. 'cotton fabric'"
-        )
-        parser.add_argument(
-            "--all-fabrics",
-            action="store_true",
-            help="Sync all fabric keywords in one run"
-        )
-        parser.add_argument(
-            "--category",
-            type=str,
-            default="Fabric",
-            help="Local category name to assign products to"
-        )
-        parser.add_argument(
-            "--limit",
-            type=int,
-            default=100,
-            help="Max products to save per keyword"
-        )
-        parser.add_argument(
-            "--max-pages",
-            type=int,
-            default=5,
-            help="Max CJ result pages to fetch per keyword"
-        )
+            if res.status_code == 429:
+                wait_time = 5 * (attempt + 1)
+                print(f"[CJ] Rate limited on '{keyword}' page {page}. Waiting {wait_time}s...")
+                time.sleep(wait_time)
+                continue
 
-    def handle(self, *args, **options):
-        category_name = options["category"].strip()
-        limit = options["limit"]
-        max_pages = options["max_pages"]
+            res.raise_for_status()
+            data = res.json()
 
-        if options["all_fabrics"]:
-            keywords = FABRIC_KEYWORDS
-        elif options["keyword"]:
-            keywords = [options["keyword"].strip()]
-        else:
-            keywords = FABRIC_KEYWORDS
+            if data.get("result") and data.get("data"):
+                return data["data"].get("list", [])
+            return []
 
-        if limit <= 0 or max_pages <= 0:
-            self.stdout.write(self.style.ERROR("limit and max-pages must be greater than 0."))
-            return
+        except requests.RequestException as e:
+            print(f"[CJ] Error fetching '{keyword}' page {page}: {e}")
+            if attempt < retries - 1:
+                time.sleep(3 * (attempt + 1))
+            else:
+                return []
+    return []
 
-        token = get_token()
-        if not token:
-            self.stdout.write(self.style.ERROR("Auth failed. Check your CJ_API_KEY."))
-            return
+def fetch_clothing(token, keyword, page=1, category_id="A04"):
+    """Updated to include optional categoryId filtering directly inside parameters"""
+    headers = {"CJ-Access-Token": token}
+    params = {
+        "productNameEn": keyword,
+        "pageNum": page,
+        "pageSize": 20
+    }
+    if category_id:
+        params["categoryId"] = category_id
 
-        category, _ = Category.objects.get_or_create(name=category_name)
-
-        grand_created = 0
-        grand_updated = 0
-        grand_skipped = 0
-
-        for keyword in keywords:
-            self.stdout.write(self.style.WARNING(
-                f"\n--- Syncing keyword: '{keyword}' ---"
-            ))
-
-            total_saved = 0
-            total_created = 0
-            total_updated = 0
-            total_skipped = 0
-
-            for page in range(1, max_pages + 1):
-                if total_saved >= limit:
-                    break
-
-                products = fetch_clothing(token, keyword=keyword, page=page, category_id="A04")
-
-                if not products:
-                    self.stdout.write(f"No products on page {page}. Moving on.")
-                    break
-
-                self.stdout.write(f"Page {page}: {len(products)} raw results from CJ.")
-
-                for item in products:
-                    if total_saved >= limit:
-                        break
-
-                    if not is_relevant_fabric(item):
-                        total_skipped += 1
-                        continue
-
-                    pid = item.get("pid")
-                    name = item.get("productNameEn", "Unnamed Product").strip()
-                    price = parse_price(item.get("sellPrice", 0))
-                    image = item.get("productImage", "")
-
-                    if not pid:
-                        total_skipped += 1
-                        self.stdout.write(self.style.WARNING("Skipped: no pid."))
-                        continue
-
-                    if not image:
-                        total_skipped += 1
-                        self.stdout.write(self.style.WARNING(f"Skipped (no image): {name}"))
-                        continue
-
-                    product, created = Product.objects.get_or_create(
-                        cj_pid=pid,
-                        defaults={
-                            "name": name,
-                            "category": category,
-                            "is_cj_product": True,
-                        }
-                    )
-
-                    if created:
-                        variant = ProductVariant.objects.create(
-                            product=product,
-                            price=price,
-                            stock=99,
-                            available=True
-                        )
-                        VariantImage.objects.create(variant=variant, image_url=image)
-                        total_created += 1
-                        total_saved += 1
-                        grand_created += 1
-                        self.stdout.write(self.style.SUCCESS(f"Added: {name}"))
-
-                    else:
-                        changed = False
-
-                        if product.name != name:
-                            product.name = name
-                            changed = True
-                        if product.category != category:
-                            product.category = category
-                            changed = True
-                        if not product.is_cj_product:
-                            product.is_cj_product = True
-                            changed = True
-                        if changed:
-                            product.save()
-
-                        variant = product.variants.first()
-                        if not variant:
-                            variant = ProductVariant.objects.create(
-                                product=product, price=price, stock=99, available=True
-                            )
-                            changed = True
-                        else:
-                            if variant.price != price:
-                                variant.price = price
-                                changed = True
-                            if not variant.stock or variant.stock <= 0:
-                                variant.stock = 99
-                                changed = True
-                            if not variant.available:
-                                variant.available = True
-                                changed = True
-                            if changed:
-                                variant.save()
-
-                        existing_image = variant.images.first()
-                        if not existing_image:
-                            VariantImage.objects.create(variant=variant, image_url=image)
-                            changed = True
-                        
-                        if changed:
-                            total_updated += 1
-                            grand_updated += 1
-                        else:
-                            total_skipped += 1
-                            grand_skipped += 1
-
-            self.stdout.write(f"Keyword '{keyword}' summary: Created {total_created}, Updated {total_updated}, Skipped {total_skipped}")
-
-        self.stdout.write(self.style.SUCCESS(
-            f"\nSync complete. Total Created: {grand_created}, Total Updated: {grand_updated}, Total Skipped: {grand_skipped}"
-        ))
-            
+    try:
+        res = requests.get(f"{BASE_URL}/product/list", headers=headers, params=params, timeout=30)
+        data = res.json()
+        if data.get("result") and data.get("data"):
+            return data["data"].get("list", [])
+    except Exception as e:
+        print(f"Error in fetch_clothing: {e}")
+    return []
+              
