@@ -4,8 +4,7 @@ import requests
 import re # Added for strict word filtering
 
 CJ_API_KEY = os.environ.get("CJ_API_KEY")
-BASE_URL = "https://cjdropshipping.com"
-
+BASE_URL = "https://developers.cjdropshipping.com/api2.0/v1"
 ANKARA_SEARCH_TERMS = [
     "textile fabric", "wax print fabric", "cotton fabric", "polyester fabric",
     "lace fabric", "chiffon fabric", "ankara fabric", "african print fabric",
