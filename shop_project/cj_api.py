@@ -80,7 +80,7 @@ def fetch_products_for_keyword(token, keyword, page=1, page_size=20, retries=3, 
         "pageNum": page,
         "pageSize": page_size,
     }
-    if category_id:
+    #if category_id:
         params["categoryId"] = category_id
 
     for attempt in range(retries):
@@ -121,7 +121,7 @@ def fetch_clothing(token, keyword, page=1, category_id="A04"):
         "pageNum": page,
         "pageSize": 20
     }
-    if category_id:
+    #if category_id:
         params["categoryId"] = category_id
 
     try:
